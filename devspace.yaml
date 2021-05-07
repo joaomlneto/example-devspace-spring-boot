@@ -1,0 +1,84 @@
+version: v1beta10
+
+# `images` specifies all images that may need to be built for this project
+images:
+  app: # This image is called `app` and this name `app` is referenced multiple times in the config below
+    image: joaomlneto/example-devspace-spring-boot
+    dockerfile: ./Dockerfile
+    injectRestartHelper: true
+    appendDockerfileInstructions:
+      - USER root
+    rebuildStrategy: ignoreContextChanges
+    build:
+      docker:
+        options:
+          target: build
+
+# `deployments` tells DevSpace how to deploy this project
+deployments:
+- name: example-devspace-spring-boot
+  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+  helm:
+    # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    componentChart: true
+    # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+    # You may also use `valuesFiles` to load values from files, e.g. valuesFiles: ["values.yaml"]
+    values:
+      containers:
+      - image: image(app):tag(app) # Use the `app` image (see `images`) and the tag DevSpace generates during image building in your Helm values
+      service:
+        ports:
+        - port: 8080
+
+# `dev` only applies when you run `devspace dev`
+dev:
+  # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running
+  # Port-forwarding lets you access your application via localhost on your local machine
+  ports:
+  - imageName: app # Select the Pod that runs our `app` image
+    forward:
+    - port: 8080
+
+  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200
+  # Since we configured port-forwarding, we can use a localhost address here to access our application
+  open:
+  - url: http://localhost:8080
+
+  # `dev.sync` configures a file sync between our Pods in k8s and your local project files
+  sync:
+  - imageName: app # Select the Pod that runs our `app` image
+    #disableDownload: true
+    excludePaths:
+    - .git/
+    uploadExcludePaths:
+    - Dockerfile
+    - target/
+    waitInitialSync: false
+    # XXX ATTENTION! This is a change from the defaults XXX
+    # Since Spring Boot devtools automatically reloads classes that were changed, instead of restarting
+    # the container, we simply have to recompile the classes!
+    onUpload:
+      execRemote:
+        command: mvn
+        args:
+          - compile
+
+  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`
+  terminal:
+    imageName: app
+    # With this optional `command` we can tell DevSpace to run a script when opening the terminal
+    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)
+    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!
+    command:
+    - ./devspace_start.sh
+
+# `profiles` lets you modify the config above for different environments (e.g. dev vs production)
+profiles:
+  # This profile is called `production` and you can use it for example using: devspace deploy -p production
+  # We generally recommend to use the base config without any profiles as optimized for development (e.g. image build+push is disabled)
+- name: production
+  # This profile applies patches to the config above.
+  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`
+  patches:
+  - op: remove
+    path: images.app.build.docker.options.target
