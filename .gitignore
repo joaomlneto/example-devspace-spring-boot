@@ -9,3 +9,10 @@ buildNumber.properties
 .mvn/timing.properties
 # https://github.com/takari/maven-wrapper#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
+
+
+# Ignore DevSpace cache and log folder
+.devspace/
+
+# Ignore IntelliJ stuff
+.idea
