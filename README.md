@@ -1,4 +1,4 @@
-# Kubernetes-Based Java Spring Boot Development With [DevSpace](https://devspace.sh/)
+# Java Spring Kubernetes Example With [DevSpace](https://devspace.sh/)
 Take a look at [`devspace.yaml`](./devspace.yaml) to see how DevSpace is configured to work with this project.
 
 ## Quickstart
